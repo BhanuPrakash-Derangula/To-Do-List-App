@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List App</title>
+    <style>
+        body {
+            background: #f4f6fb;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 420px;
+            margin: 3rem auto;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+            padding: 2rem 2.5rem 2.5rem 2.5rem;
+        }
+        h1 {
+            text-align: center;
+            color: #2d6cdf;
+            margin-bottom: 1.5rem;
+        }
+        form {
+            display: flex;
+            gap: 0.7rem;
+            margin-bottom: 1.5rem;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 0.7rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        button {
+            background: #2d6cdf;
+            color: #fff;
+            border: none;
+            padding: 0.7rem 1.2rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #1a4e9b;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background: #f7f9fc;
+            margin-bottom: 0.7rem;
+            padding: 0.8rem 0.7rem;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+        }
+        .task {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+        }
+        .task input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+        .completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .actions button {
+            background: #e74c3c;
+            margin-left: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            font-size: 0.95rem;
+            border-radius: 4px;
+        }
+        .actions button.edit {
+            background: #f39c12;
+        }
+        .actions button:hover {
+            opacity: 0.85;
+        }
+        .empty {
+            text-align: center;
+            color: #aaa;
+            margin-top: 2rem;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>To-Do List</h1>
+        <form id="todo-form">
+            <input type="text" id="todo-input" placeholder="Add a new task..." autocomplete="off" required>
+            <button type="submit">Add</button>
+        </form>
+        <ul id="todo-list"></ul>
+        <div class="empty" id="empty-msg">No tasks yet. Enjoy your day!</div>
+    </div>
+    <script>
+    // --- To-Do List App ---
+    let todos = [];
+    let editingIndex = null;
+    const todoForm = document.getElementById('todo-form');
+    const todoInput = document.getElementById('todo-input');
+    const todoList = document.getElementById('todo-list');
+    const emptyMsg = document.getElementById('empty-msg');
+
+    function saveTodos() {
+        localStorage.setItem('todos', JSON.stringify(todos));
+    }
+    function loadTodos() {
+        const data = localStorage.getItem('todos');
+        todos = data ? JSON.parse(data) : [];
+    }
+    function renderTodos() {
+        todoList.innerHTML = '';
+        if (todos.length === 0) {
+            emptyMsg.style.display = 'block';
+            return;
+        }
+        emptyMsg.style.display = 'none';
+        todos.forEach((todo, idx) => {
+            const li = document.createElement('li');
+            const taskDiv = document.createElement('div');
+            taskDiv.className = 'task';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = todo.completed;
+            checkbox.onchange = () => toggleComplete(idx);
+            const span = document.createElement('span');
+            span.textContent = todo.text;
+            if (todo.completed) span.classList.add('completed');
+            taskDiv.appendChild(checkbox);
+            taskDiv.appendChild(span);
+            li.appendChild(taskDiv);
+            const actions = document.createElement('div');
+            actions.className = 'actions';
+            const editBtn = document.createElement('button');
+            editBtn.textContent = 'Edit';
+            editBtn.className = 'edit';
+            editBtn.onclick = () => editTodo(idx);
+            const delBtn = document.createElement('button');
+            delBtn.textContent = 'Delete';
+            delBtn.onclick = () => deleteTodo(idx);
+            actions.appendChild(editBtn);
+            actions.appendChild(delBtn);
+            li.appendChild(actions);
+            todoList.appendChild(li);
+        });
+    }
+    function addTodo(text) {
+        todos.push({ text, completed: false });
+        saveTodos();
+        renderTodos();
+    }
+    function editTodo(idx) {
+        editingIndex = idx;
+        todoInput.value = todos[idx].text;
+        todoInput.focus();
+    }
+    function updateTodo(text) {
+        if (editingIndex !== null) {
+            todos[editingIndex].text = text;
+            editingIndex = null;
+            saveTodos();
+            renderTodos();
+        }
+    }
+    function deleteTodo(idx) {
+        if (confirm('Delete this task?')) {
+            todos.splice(idx, 1);
+            saveTodos();
+            renderTodos();
+        }
+    }
+    function toggleComplete(idx) {
+        todos[idx].completed = !todos[idx].completed;
+        saveTodos();
+        renderTodos();
+    }
+    todoForm.onsubmit = function(e) {
+        e.preventDefault();
+        const text = todoInput.value.trim();
+        if (!text) return;
+        if (editingIndex !== null) {
+            updateTodo(text);
+        } else {
+            addTodo(text);
+        }
+        todoInput.value = '';
+    };
+    // --- Load and Render ---
+    loadTodos();
+    renderTodos();
+    </script>
+</body>
+</html>
